@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "319466150128",
+    "project_id": "arfy-ad3a5",
+    "storage_bucket": "arfy-ad3a5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:319466150128:android:359bc12b5e7b8c5d260a35",
+        "android_client_info": {
+          "package_name": "com.joo.assignment"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3nDc5vFnO0u4_XTbr5BwaQL8s_x7m2aM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

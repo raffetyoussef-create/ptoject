@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User Profiles
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow others to read basic info? Maybe needed for messaging later. 
+      // For now, strict as per prompt.
+    }
+    
+    // Craftsmen Profiles
+    match /craftsmen/{craftsmanId} {
+      // Craftsman can write their own profile
+      allow write: if request.auth != null && request.auth.uid == craftsmanId;
+      // Everyone (authenticated) can read craftsmen profiles to display them
+      allow read: if request.auth != null;
+    }
+    
+    // Tasks (existing rule)
+    match /tasks/{taskId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
