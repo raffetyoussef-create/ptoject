@@ -28,6 +28,9 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
   final _addressController = TextEditingController();
   final _priceController = TextEditingController();
 
+  // ✅ إضافة PageController للتحكم في التنقل بين الصفحات
+  final PageController _pageController = PageController();
+
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   int _currentStep = 0;
@@ -85,6 +88,7 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
     _descriptionController.dispose();
     _addressController.dispose();
     _priceController.dispose();
+    _pageController.dispose(); // ✅ تنظيف الـ controller
     super.dispose();
   }
 
@@ -126,12 +130,12 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
         'customerId': user.uid,
         'customerName': userDoc.data()?['name'] ?? 'عميل حِرَفي',
         'customerPhone': userDoc.data()?['phone'] ?? '',
-        'status': 'new', // تغيير من pending إلى new لتطابق النظام
+        'status': 'new', // ✅ وضع الحالة "new" لتظهر كطلب جديد
         'createdAt': FieldValue.serverTimestamp(),
-      };
+      }; // ✅ إغلاق الـ Map بشكل صحيح
 
-      // حفظ في مجموعة jobs
-      await FirebaseFirestore.instance.collection('jobs').add(bookingData);
+      // حفظ في مجموعة bookings كما طلب المستخدم
+      await FirebaseFirestore.instance.collection('bookings').add(bookingData);
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -182,6 +186,7 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
                   child: Form(
                     key: _formKey,
                     child: PageView(
+                      controller: _pageController, // ✅ ربط الـ PageController
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         _buildStepContainer(_buildServiceDetailsStep()),
@@ -549,7 +554,14 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
           if (_currentStep > 0)
             Expanded(
               child: TextButton(
-                onPressed: () => setState(() => _currentStep--),
+                onPressed: () {
+                  setState(() => _currentStep--);
+                  _pageController.animateToPage(
+                    _currentStep,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
                 child: const Text('السابق', style: TextStyle(color: Colors.grey, fontSize: 16)),
               ),
             ),
@@ -590,8 +602,25 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
   }
 
   void _nextStep() {
-    if (_currentStep == 0 && !_formKey.currentState!.validate()) return;
+    // في الخطوة الأولى، نتحقق فقط من الحقول النصية والقائمة المنسدلة
+    if (_currentStep == 0) {
+      if (!_formKey.currentState!.validate() || _selectedService == null) return;
+    }
+    
+    // في الخطوة الثانية، نتحقق من اختيار الوقت والتاريخ
+    if (_currentStep == 1) {
+      if (_selectedDate == null || _selectedTime == null) {
+        _showSnackBar('الرجاء تحديد التاريخ والوقت أولاً', isError: true);
+        return;
+      }
+    }
+
     setState(() => _currentStep++);
+    _pageController.animateToPage(
+      _currentStep,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> _pickDate() async {

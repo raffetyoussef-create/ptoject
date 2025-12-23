@@ -131,20 +131,29 @@ class _CraftsmanHomeScreenState extends State<CraftsmanHomeScreen> {
     if (user == null) return;
 
     try {
-      // جلب الطلبات المعلقة
+      // جلب الطلبات المعلقة (new bookings)
       final pendingRequests = await FirebaseFirestore.instance
-          .collection('requests')
+          .collection('bookings') // ✅ تم التعديل من requests إلى bookings
           .where('craftsmanId', isEqualTo: user.uid)
-          .where('status', isEqualTo: 'pending')
+          .where('status', isEqualTo: 'new') // ✅ الحالة new هي الطلبات الجديدة
           .get();
       
-      // جلب الحجوزات القادمة
-      final upcomingBookings = await FirebaseFirestore.instance
+      // جلب الحجوزات القادمة (Confirmed)
+      // ✅ إزالة شرط التاريخ من الاستعلام لتجنب مشكلة Index
+      final confirmedBookingsQuery = await FirebaseFirestore.instance
           .collection('bookings')
           .where('craftsmanId', isEqualTo: user.uid)
           .where('status', isEqualTo: 'confirmed')
-          .where('date', isGreaterThanOrEqualTo: DateTime.now())
           .get();
+
+      // ✅ تصفية الحجوزات القادمة فقط في التطبيق
+      final now = DateTime.now();
+      final upcomingBookingsCount = confirmedBookingsQuery.docs.where((doc) {
+        final data = doc.data();
+        if (data['appointmentDate'] == null) return false;
+        final date = (data['appointmentDate'] as Timestamp).toDate();
+        return date.isAfter(now) || date.isAtSameMomentAs(now);
+      }).length;
       
       // جلب الأرباح (من الحجوزات المكتملة)
       final earningsQuery = await FirebaseFirestore.instance
@@ -160,7 +169,7 @@ class _CraftsmanHomeScreenState extends State<CraftsmanHomeScreen> {
 
       setState(() {
         _pendingRequests = pendingRequests.docs.length;
-        _upcomingBookings = upcomingBookings.docs.length;
+        _upcomingBookings = upcomingBookingsCount; // ✅ استخدام العدد المحسوب
         _totalEarnings = earnings;
       });
     } catch (e) {
@@ -665,16 +674,33 @@ class _CraftsmanHomeScreenState extends State<CraftsmanHomeScreen> {
           .collection('bookings')
           .where('craftsmanId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
           .where('status', isEqualTo: 'confirmed')
-          .where('date', isGreaterThanOrEqualTo: DateTime.now())
-          .orderBy('date')
-          .limit(3)
+          // .where('appointmentDate', isGreaterThanOrEqualTo: Timestamp.now()) // ❌ إزالة لعدم وجود Index
+          // .orderBy('appointmentDate') // ❌ إزالة الترتيب أيضاً
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final bookings = snapshot.data!.docs;
+        // ✅ الفرز والتصفية في التطبيق
+        var bookings = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['appointmentDate'] == null) return false;
+          final date = (data['appointmentDate'] as Timestamp).toDate();
+          return date.isAfter(DateTime.now().subtract(const Duration(days: 1))); // إظهار حجوزات اليوم والمستقبل
+        }).toList();
+
+        // ترتيب حسب التاريخ
+        bookings.sort((a, b) {
+           final dateA = ((a.data() as Map<String, dynamic>)['appointmentDate'] as Timestamp).toDate();
+           final dateB = ((b.data() as Map<String, dynamic>)['appointmentDate'] as Timestamp).toDate();
+           return dateA.compareTo(dateB);
+        });
+
+        // أخذ أول 3 فقط
+        if (bookings.length > 3) {
+          bookings = bookings.sublist(0, 3);
+        }
         
         if (bookings.isEmpty) {
           return Container(
@@ -710,7 +736,7 @@ class _CraftsmanHomeScreenState extends State<CraftsmanHomeScreen> {
           itemCount: bookings.length,
           itemBuilder: (context, index) {
             final booking = bookings[index].data() as Map<String, dynamic>;
-            final date = (booking['date'] as Timestamp).toDate();
+            final date = (booking['appointmentDate'] as Timestamp).toDate(); // ✅ تصحيح الاسم
             
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -741,7 +767,7 @@ class _CraftsmanHomeScreenState extends State<CraftsmanHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          booking['service'] ?? 'خدمة',
+                          booking['serviceType'] ?? 'خدمة', // ✅ تصحيح الاسم
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -749,14 +775,14 @@ class _CraftsmanHomeScreenState extends State<CraftsmanHomeScreen> {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          '${_formatDate(date)} - ${booking['time'] ?? ''}',
+                          '${_formatDate(date)} - ${booking['appointmentTime'] ?? ''}', // ✅ تصحيح الاسم
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                       ],
                     ),
                   ),
                   Text(
-                    '${booking['price']?.toString() ?? '0'} ج.م',
+                    '${booking['expectedPrice']?.toString() ?? '0'} ج.م', // ✅ تصحيح الاسم
                     style: TextStyle(
                       color: successColor,
                       fontWeight: FontWeight.bold,

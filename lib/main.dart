@@ -21,17 +21,21 @@ import 'CraftsmanJobs_Screen.dart';
 import 'Booking_Screen.dart';
 import 'Profile_Screen.dart';
 import 'Todo_Screen.dart';
+import 'CraftsmanRequests_Screen.dart'; // ✅ Import
+
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
+    await initializeDateFormatting('ar', null); // ✅ تهيئة تنسيق التواريخ للعربية
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('✅ Firebase initialized successfully');
   } catch (e) {
-    print('❌ Firebase initialization error: $e');
+    print('❌ Initialization error: $e');
   }
   
   runApp(const MyApp());
@@ -70,8 +74,18 @@ class MyApp extends StatelessWidget {
         '/craftsman_profile': (context) => const CraftsmanProfileScreen(),
         '/edit_craftsman_profile': (context) => const EditCraftsmanProfileScreen(),
         '/craftsman_jobs': (context) => const CraftsmanJobsScreen(),
-        
         '/craftsman_home': (context) => const CraftsmanHomeScreen(),
+        '/craftsman_requests': (context) => const CraftsmanRequestsScreen(), // ✅ الصفحة الجديدة
+        
+        // روابط إضافية لمنع الانهيار
+        '/craftsman_bookings': (context) => const PlaceholderScreen(title: 'جدول الحجوزات'),
+        '/craftsman_chats': (context) => const PlaceholderScreen(title: 'المحادثات'),
+        '/craftsman_payments': (context) => const PlaceholderScreen(title: 'المدفوعات'),
+        '/craftsman_notifications': (context) => const PlaceholderScreen(title: 'الإشعارات'),
+        '/craftsman_earnings': (context) => const PlaceholderScreen(title: 'الأرباح'),
+        '/craftsman_reviews': (context) => const PlaceholderScreen(title: 'التقييمات'),
+        '/craftsman_edit_profile': (context) => const PlaceholderScreen(title: 'تعديل الملف الشخصي'),
+
         // ✅ الروابط الجديدة المضافة
         '/qr_scanner': (context) => const PlaceholderScreen(title: 'ماسح QR'),
         '/notifications': (context) => const PlaceholderScreen(title: 'الإشعارات'),
@@ -99,23 +113,34 @@ class MyApp extends StatelessWidget {
         }
         
         if (settings.name == '/craftsman_details') {
-          final String craftsmanId = settings.arguments as String;
+          final args = settings.arguments as Map<String, dynamic>;
+          final String craftsmanId = args['craftsmanId'];
           return MaterialPageRoute(
             builder: (context) => CraftsmanDetailsScreen(craftsmanId: craftsmanId),
           );
         }
         
         if (settings.name == '/booking') {
+          String craftsmanId = '';
+          String craftsmanName = '';
+          String craftsmanCategory = '';
+
           if (settings.arguments is Map<String, dynamic>) {
             final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => BookingScreen(
-                craftsmanId: args['craftsmanId'] ?? '',
-                craftsmanName: args['craftsmanName'] ?? '',
-                craftsmanCategory: args['craftsmanCategory'] ?? '',
-              ),
-            );
+            craftsmanId = args['craftsmanId'] ?? '';
+            craftsmanName = args['craftsmanName'] ?? '';
+            craftsmanCategory = args['craftsmanCategory'] ?? '';
+          } else if (settings.arguments is String) {
+            craftsmanId = settings.arguments as String;
           }
+
+          return MaterialPageRoute(
+            builder: (context) => BookingScreen(
+              craftsmanId: craftsmanId,
+              craftsmanName: craftsmanName,
+              craftsmanCategory: craftsmanCategory,
+            ),
+          );
         }
         
         // ✅ Chat route
