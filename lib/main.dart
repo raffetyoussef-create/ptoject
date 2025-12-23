@@ -22,6 +22,7 @@ import 'Booking_Screen.dart';
 import 'Profile_Screen.dart';
 import 'Todo_Screen.dart';
 import 'CraftsmanRequests_Screen.dart'; // ✅ Import
+import 'CraftsmanBookings_Screen.dart'; // ✅ Import
 
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -77,8 +78,7 @@ class MyApp extends StatelessWidget {
         '/craftsman_home': (context) => const CraftsmanHomeScreen(),
         '/craftsman_requests': (context) => const CraftsmanRequestsScreen(), // ✅ الصفحة الجديدة
         
-        // روابط إضافية لمنع الانهيار
-        '/craftsman_bookings': (context) => const PlaceholderScreen(title: 'جدول الحجوزات'),
+        '/craftsman_bookings': (context) => const CraftsmanBookingsScreen(), // ✅ صفحة الجدول الحقيقية
         '/craftsman_chats': (context) => const PlaceholderScreen(title: 'المحادثات'),
         '/craftsman_payments': (context) => const PlaceholderScreen(title: 'المدفوعات'),
         '/craftsman_notifications': (context) => const PlaceholderScreen(title: 'الإشعارات'),
